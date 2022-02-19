@@ -16,8 +16,6 @@
  */
 package org.apache.solr.search;
 
-import java.util.Collection;
-import java.util.Collections;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.util.Accountable;
@@ -25,12 +23,16 @@ import org.apache.lucene.util.BitSetIterator;
 import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.RamUsageEstimator;
 
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.Collections;
+
 /**
  * A {@link FixedBitSet} based implementation of a {@link DocSet}.  Good for medium/large sets.
  *
  * @since solr 0.9
  */
-public class BitDocSet extends DocSet {
+public class BitDocSet extends DocSet implements Serializable {
   private static final long BASE_RAM_BYTES_USED = RamUsageEstimator.shallowSizeOfInstance(BitDocSet.class)
       + RamUsageEstimator.shallowSizeOfInstance(FixedBitSet.class)
       + RamUsageEstimator.NUM_BYTES_ARRAY_HEADER;  // for the array object inside the FixedBitSet. long[] array won't change alignment, so no need to calculate it.

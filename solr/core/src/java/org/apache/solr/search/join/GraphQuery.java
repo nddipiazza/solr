@@ -16,12 +16,6 @@
  */
 package org.apache.solr.search.join;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.TreeSet;
-
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
@@ -48,6 +42,12 @@ import org.apache.solr.search.BitDocSet;
 import org.apache.solr.search.DocSet;
 import org.apache.solr.search.SolrIndexSearcher;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.TreeSet;
+
 /**
  * GraphQuery - search for nodes and traverse edges in an index.
  * 
@@ -62,7 +62,7 @@ import org.apache.solr.search.SolrIndexSearcher;
  * @lucene.experimental
  */
 public class GraphQuery extends Query {
-  
+
   /** The inital node matching query */
   private Query q;
   /** the field with the node id */
@@ -83,7 +83,7 @@ public class GraphQuery extends Query {
   
   /** False if documents matching the start query for the graph will be excluded from the final result set.  */
   private boolean returnRoot = true;
-  
+
   /**
    * Create a graph query 
    * q - the starting node query
@@ -232,13 +232,12 @@ public class GraphQuery extends Query {
         resultBits.andNot(rootBits);
       }
       // this is the final resulting filter.
-      BitDocSet resultSet = new BitDocSet(resultBits);
+      DocSet resultSet = new BitDocSet(resultBits);
       // If we only want to return leaf nodes do that here.
       if (onlyLeafNodes) {
-        return resultSet.intersection(leafNodes);
-      } else {
-        return resultSet;
+        resultSet = resultSet.intersection(leafNodes);
       }
+      return resultSet;
     }
     
     private DocSet resolveLeafNodes() throws IOException {
@@ -269,6 +268,7 @@ public class GraphQuery extends Query {
       if (resultSet == null) {
         resultSet = getDocSet();
       }
+
       DocIdSetIterator disi = resultSet.iterator(context);
       // create a scrorer on the result set, if results from right query are empty, use empty iterator.
       return new GraphScorer(this, disi == null ? DocIdSetIterator.empty() : disi, 1);
