@@ -19,13 +19,13 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Serializable on-disk cache.
  */
-public class GraphDocSetCache implements Serializable {
+public class DiskDocSetCache {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
-  public static final String SOLR_GRAPH_CACHE_PATH =
-      System.getProperty("solr.graph.cache.path", new File(System.getProperty("java.io.tmpdir"), "graph-cache.mapdb").getAbsolutePath());
+  public static final String SOLR_DISK_CACHE_PATH =
+      System.getProperty("solr.disk.cache.path", new File(System.getProperty("java.io.tmpdir"), "disk-cache.mapdb").getAbsolutePath());
   public static final long
-      CACHE_EXPIRY_MILLIS = Long.parseLong(System.getProperty("solr.graph.cache.expiry", "86400000"));
+      CACHE_EXPIRY_MILLIS = Long.parseLong(System.getProperty("solr.disk.cache.expiry", "86400000"));
   public static final String CACHE_TABLE_NAME = "doc_set_cache";
   private final BTreeMap<String, long[]> onDiskCache;
   private final AtomicLong cacheHits = new AtomicLong();
@@ -33,15 +33,15 @@ public class GraphDocSetCache implements Serializable {
   private final AtomicLong cachePuts = new AtomicLong();
   private final AtomicLong cacheEvicts = new AtomicLong();
   private static final Object instanceLock = new Object();
-  private static volatile GraphDocSetCache instance;
+  private static volatile DiskDocSetCache instance;
 
-  public static GraphDocSetCache getInstance() {
-    GraphDocSetCache r = instance;
+  public static DiskDocSetCache getInstance() {
+    DiskDocSetCache r = instance;
     if (r == null) {
       synchronized (instanceLock) {
         r = instance;
         if (r == null) {
-          r = new GraphDocSetCache();
+          r = new DiskDocSetCache();
           instance = r;
         }
       }
@@ -49,20 +49,20 @@ public class GraphDocSetCache implements Serializable {
     return r;
   }
 
-  private GraphDocSetCache() {
-    File graphCacheFile = new File(SOLR_GRAPH_CACHE_PATH);
-    if (graphCacheFile.exists()) {
-      FileUtils.deleteQuietly(graphCacheFile);
+  private DiskDocSetCache() {
+    File diskCacheFile = new File(SOLR_DISK_CACHE_PATH);
+    if (diskCacheFile.exists()) {
+      FileUtils.deleteQuietly(diskCacheFile);
     }
     DBMaker.Maker maker = DBMaker
-        .fileDB(graphCacheFile);
+        .fileDB(diskCacheFile);
     DB db = maker.closeOnJvmShutdown()
         .make();
     onDiskCache = db.treeMap(CACHE_TABLE_NAME, Serializer.STRING, Serializer.LONG_ARRAY)
         .createOrOpen();
   }
 
-  public static long[] docSetToLongArray(BitDocSet bitDocSet) {
+  private static long[] docSetToLongArray(BitDocSet bitDocSet) {
     long [] ar = new long[bitDocSet.getBits().getBits().length + 3];
     System.arraycopy(bitDocSet.getBits().getBits(), 0, ar, 0, bitDocSet.getBits().getBits().length);
     ar[bitDocSet.getBits().getBits().length] = bitDocSet.size(); // size
@@ -71,7 +71,7 @@ public class GraphDocSetCache implements Serializable {
     return ar;
   }
 
-  public static Optional<DocSet> docSetFromLongArray(long [] longArray) {
+  private static Optional<DocSet> docSetFromLongArray(long [] longArray) {
     // n is length of bitset
     // 0, ..., n-4 = contain the bitset (long integer array)
     // n-3 = size
@@ -86,30 +86,30 @@ public class GraphDocSetCache implements Serializable {
     return Optional.of(new BitDocSet(new FixedBitSet(bits, (int)longArray[longArray.length - 3]), (int)longArray[longArray.length - 2]));
   }
 
-  public static Optional<DocSet> getGraphDocSetFromCache(String q) {
-    GraphDocSetCache graphDocSetCache = getInstance();
-    BTreeMap<String, long[]> graphCacheDocSet = graphDocSetCache.onDiskCache;
-    boolean hit = graphCacheDocSet.containsKey(q);
-    log.info("Graph on-disk filter cache read: q={}, hit={}, cacheTotalHits={}, cacheTotalMisses={}, cacheTotalPuts={}, cacheTotalEvicts={}",
+  public static Optional<DocSet> get(String q) {
+    DiskDocSetCache diskDocSetCache = getInstance();
+    BTreeMap<String, long[]> diskCacheDocSet = diskDocSetCache.onDiskCache;
+    boolean hit = diskCacheDocSet.containsKey(q);
+    log.info("Disk on-disk filter cache read: q={}, hit={}, cacheTotalHits={}, cacheTotalMisses={}, cacheTotalPuts={}, cacheTotalEvicts={}",
         q,
         hit,
-        graphDocSetCache.cacheHits.get(),
-        graphDocSetCache.cacheMisses.get(),
-        graphDocSetCache.cachePuts.get(),
-        graphDocSetCache.cacheEvicts.get());
+        diskDocSetCache.cacheHits.get(),
+        diskDocSetCache.cacheMisses.get(),
+        diskDocSetCache.cachePuts.get(),
+        diskDocSetCache.cacheEvicts.get());
     if (hit) {
-      graphDocSetCache.cacheHits.incrementAndGet();
-      return docSetFromLongArray(Objects.requireNonNull(graphCacheDocSet.get(q)));
+      diskDocSetCache.cacheHits.incrementAndGet();
+      return docSetFromLongArray(Objects.requireNonNull(diskCacheDocSet.get(q)));
     }
-    graphDocSetCache.cacheMisses.incrementAndGet();
+    diskDocSetCache.cacheMisses.incrementAndGet();
     return Optional.empty();
   }
 
-  public static void putGraphDocSetInCache(String q, DocSet docSet) {
+  public static void put(String q, DocSet docSet) {
     if (docSet instanceof BitDocSet) {
-      GraphDocSetCache graphDocSetCache = getInstance();
-      graphDocSetCache.onDiskCache.put(q, docSetToLongArray((BitDocSet) docSet));
-      graphDocSetCache.cachePuts.incrementAndGet();
+      DiskDocSetCache diskDocSetCache = getInstance();
+      diskDocSetCache.onDiskCache.put(q, docSetToLongArray((BitDocSet) docSet));
+      diskDocSetCache.cachePuts.incrementAndGet();
     }
   }
 }

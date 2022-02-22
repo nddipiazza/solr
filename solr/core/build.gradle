@@ -87,6 +87,8 @@ dependencies {
   implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-smile'
 
   implementation 'org.mapdb:mapdb:3.0.8'
+  implementation 'com.zaxxer:HikariCP:5.0.1'
+  implementation 'mysql:mysql-connector-java:8.0.28'
 
   implementation 'org.apache.httpcomponents:httpclient'
   implementation 'org.apache.httpcomponents:httpcore'
@@ -208,6 +210,10 @@ dependencies {
   testImplementation('org.mockito:mockito-core', {
     exclude group: "net.bytebuddy", module: "byte-buddy-agent"
   })
+}
+
+repositories {
+  mavenCentral()
 }
 
 

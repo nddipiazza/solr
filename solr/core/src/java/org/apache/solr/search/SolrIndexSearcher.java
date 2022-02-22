@@ -881,12 +881,18 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable, SolrI
     }
 
     if (query instanceof GraphQuery) {
-      Optional<DocSet> graphDocSet = GraphDocSetCache.getGraphDocSetFromCache(query.toString());
+      String aclId = ((TermQuery) ((GraphQuery) query).getQ()).getTerm().text();
+
+//      Optional<DocSet> graphDocSet = DiskDocSetCache.get(query.toString());
+      Optional<DocSet> graphDocSet = DatabaseDocSetCache.get(aclId);
+//      Optional<DocSet> graphDocSet = SidecarDocSetCache.get(aclId);
       if (graphDocSet.isPresent()) {
         return graphDocSet.get();
       }
       DocSet res = getDocSetNC(query, null);
-      GraphDocSetCache.putGraphDocSetInCache(query.toString(), res);
+//      DiskDocSetCache.put(query.toString(), res);
+      DatabaseDocSetCache.put(aclId, res);
+//      SidecarDocSetCache.put(aclId, res);
       return res;
     }
 

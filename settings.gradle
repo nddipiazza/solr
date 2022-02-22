@@ -54,4 +54,6 @@ include "solr:prometheus-exporter"
 
 // Configures development for joint Lucene/ Solr composite build.
 apply from: file('gradle/lucene-dev/lucene-dev-repo-composite.gradle')
+include 'solr:dev'
+findProject(':solr:dev')?.name = 'dev'
 

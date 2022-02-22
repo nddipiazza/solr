@@ -1,0 +1,14 @@
+plugins {
+    id 'java'
+}
+
+group 'org.apache'
+version '10.0.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.eclipse.jetty:jetty-start'
+}
